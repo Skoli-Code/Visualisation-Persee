@@ -2,19 +2,42 @@
 body {
   color: #333;
   background: #eee;
+  &,html {
+    * {
+      box-sizing: border-box;
+    }
+  }
 }
 
 a {
   color: #0089ff;
   cursor: pointer;
-}
-a:hover, a:visited {
-  color: blue;
+  text-decoration: none;
 }
 
+a:hover {
+  color: blue;
+}
+h1{
+  margin-bottom: 10px;
+}
+
+h2 {
+  margin-bottom: 7px;
+}
+
+h3, h4, h5 {
+  margin-bottom: 5px;
+}
+p {
+  margin-top: 2px;
+  margin-bottom: 15px;
+}
 .index {
   width: 80%;
   margin: auto;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 @media screen and (max-width: 800px){

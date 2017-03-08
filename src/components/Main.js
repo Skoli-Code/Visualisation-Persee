@@ -2,15 +2,25 @@ require('normalize.css/normalize.css');
 require('./Main.scss');
 
 import React from 'react';
-import Author from './Author';
+import { AuthorList } from './Author';
+import Footer from './Footer';
 
 // let yeomanImage = require('../images/yeoman.png');
 
 class AppComponent extends React.Component {
   render() {
+    const names = [
+      'Pierre Bourdieu',
+      'Marc Bloch',
+      'Alfred Sauvy',
+      'Pierre Lévêque'
+    ];
     return (
       <div className="index">
-        <Author authorName={'Pierre Bourdieu'}/>
+        <AuthorList authorNames={ names }/>
+        <Footer>
+          Une création de l'agence <a href="http://skoli.fr">Skoli</a>. Son code est disponible sur <a href="#" target="_blank" rel="nofollow">GitHub</a>
+        </Footer>
       </div>
     );
   }
