@@ -1,0 +1,39 @@
+/* Base Application Styles */
+body {
+  color: #333;
+  background: #eee;
+}
+
+a {
+  color: #0089ff;
+  cursor: pointer;
+}
+a:hover, a:visited {
+  color: blue;
+}
+
+.index {
+  width: 80%;
+  margin: auto;
+}
+
+@media screen and (max-width: 800px){
+  .index {
+    width: 100%;
+  }
+}
+.index img {
+  margin: 40px auto;
+  border-radius: 4px;
+  background: #fff;
+  display: block;
+}
+
+.index .notice {
+  margin: 20px auto;
+  padding: 15px 0;
+  text-align: center;
+  border: 1px solid #000;
+  border-width: 1px 0;
+  background: #666;
+}
