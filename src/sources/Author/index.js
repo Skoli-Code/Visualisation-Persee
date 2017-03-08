@@ -41,16 +41,13 @@ class AuthorSource {
       ?doc dcterms:identifier ?docURL .
       FILTER(?name = "${authorName}")
       OPTIONAL {
-        {
           ?doc dcterms:abstract ?docAbstract .
           FILTER(LANG(?docAbstract)= "fr")
-        }
-        UNION
-        {
+      } .
+      OPTIONAL {
           ?doc dcterms:abstract ?englishDocAbstract .
           FILTER(LANGMATCHES(LANG(?englishDocAbstract),"en"))
-        }
-      }
+      } .
     }
     GROUP BY ?docURL ?docAbstract ?englishDocAbstract ?docTitle ?name ?publisher ?pubDate
     ORDER BY ?year`;

@@ -40,8 +40,9 @@ class AuthorList extends React.Component {
         {
           !focusedAuthorName &&
             <div>
-              <h1>Utilisation des données de data.persee.fr</h1>
-              <p>Cliquer sur le nom d'un auteur afin de visualiser quels étaient ses articles les plus cités.</p>
+              <h1>Une exploration (des données) de Persée</h1>
+              <p>Cette application est une démonstration des possibilités offertes par le web sémantique et les plateformes <a href="http://data.persee.fr" rel="nofollow" target="_blank">data.persee.fr</a> et <a href="http://dbpedia.org" rel="nofollow" target="_blank">dbpedia.org</a>. Le but ici est de visualiser quels sont les moments les plus marquants du parcours d'un auteur. Pour ce faire nous visualisons l'ensemble de ses documents référencées sur persee.fr ayant été cités sur cette même plateforme. <br/><br/>
+              Pour commencer, cliquez sur un des auteurs ci-dessous.</p>
               <ul>
               {
                 authorNames.map((authorName, key)=>{

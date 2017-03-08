@@ -12,14 +12,14 @@ class AppComponent extends React.Component {
     const names = [
       'Pierre Bourdieu',
       'Marc Bloch',
-      'Alfred Sauvy',
-      'Pierre Lévêque'
+      'Alfred Sauvy'
+      // 'Pierre Lévêque'
     ];
     return (
       <div className="index">
         <AuthorList authorNames={ names }/>
         <Footer>
-          Une création de l'agence <a href="http://skoli.fr">Skoli</a>. Son code est disponible sur <a href="#" target="_blank" rel="nofollow">GitHub</a>
+          Une création de l'agence <a  target="_blank" rel="nofollow" href="http://skoli.fr">Skoli</a>. Son code est disponible sur <a href="https://github.com/Skoli-Code/Visualisation-Persee" target="_blank" rel="nofollow">GitHub</a><br/>Favicon "Olympic Torch" par Thays Malcher du Noun Project
         </Footer>
       </div>
     );

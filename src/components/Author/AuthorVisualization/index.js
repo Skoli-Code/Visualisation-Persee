@@ -80,7 +80,7 @@ class AuthorVisualizationComponent extends React.Component {
     const abstract = getAbstract(focusedDocument);
     return (
       <div className="author-viz">
-        <h3>Ses documents les plus cités</h3>
+        <h3>Ses documents les plus cités (taille des bulles proportionnelle)</h3>
         <p>Cliquer sur une bulle pour obtenir des infos sur cet article</p>
         { chart &&
           <div className="author-viz__controls">
@@ -93,7 +93,7 @@ class AuthorVisualizationComponent extends React.Component {
           focusedDocument &&
           <div className="document-details">
             <h4>
-              { v(focusedDocument.docTitle) }&nbsp;-&nbsp;
+              { v(focusedDocument.docTitle) }<br/>
               <a href={ v(focusedDocument.docURL) } rel="nofollow" target="_blank">Voir ce document sur Persee</a>
             </h4>
             <div className="document-details__info">

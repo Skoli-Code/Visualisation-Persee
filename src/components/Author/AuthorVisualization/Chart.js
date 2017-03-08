@@ -49,6 +49,7 @@ const objectStyle = (sel, styles) => {
 const objectAttr = (sel, attrs) => {
   objectSetObj(sel, attrs, 'attr');
 }
+const uniq = (arr)=>Array.from(new Set(arr));
 
 class Chart {
   constructor(component, node, publications){
@@ -74,6 +75,11 @@ class Chart {
   }
 
   unfocusDocument(){
+    this.$documentsEnter.filter('.focused').style('fill',function(){
+      const $doc = d3.select(this);
+      $doc.style('fill', $doc.attr('data-origin-fill'))
+        .classed('focused', false);
+    })
     this.component.unfocusDocument();
   }
 
@@ -90,9 +96,7 @@ class Chart {
         }
       })
     };
-    this.data.editors = Array.from(
-      new Set(this.data.documents.map(d=>d.editor))
-    );
+    this.data.editors = uniq(this.data.documents.map(d=>d.editor));
     this.data.years = this.data.documents.map(d=>d.year);
     const root = {
       name: 'root',
@@ -132,7 +136,8 @@ class Chart {
     this.colorScale =  d3.scaleOrdinal(d3.schemeCategory10)
       .domain(this.data.editors);
 
-    this.radiusScale = d3.scaleLinear().range(this.config.circleRange)
+    this.radiusScale = d3.scaleLinear()
+      .range(this.config.circleRange)
       .domain(d3.extent(this.data.documents.map(d=>d.citations)));
 
     this.xScale = d3.scaleLinear()
@@ -297,7 +302,6 @@ class Chart {
     this.simulation = d3.forceSimulation()
       .velocityDecay(0.44)
       .nodes(this.data.packedDocuments)
-      // .force('charge', d3.forceManyBody())
       .force('x', this.forceX())
       .force('y', this.forceY())
       .force('radius', d3.forceCollide((d)=>this.radiusScale(d.data.citations)+1))
@@ -325,19 +329,38 @@ class Chart {
     this.$node = d3.select(n);
   }
 
-  update(useMapping=false){
-    this.config.useMapping = useMapping;
-    this.updateDraw();
-  }
-
   draw(){
+    let self = this;
     this.$documents = this.$g.selectAll('.document')
       .data(this.data.packedDocuments);
 
     this.$documentsEnter = this.$documents.enter()
       .append('circle')
       .attr('class', (d)=>`document year-${d.data.year}`)
-      .on('click', (d)=>this.focusDocument(d));
+      .on('click', function(d){
+        const $doc = d3.select(this);
+        const focused = $doc.classed('focused');
+        self.unfocusDocument();
+        const originalFill = $doc.attr('data-origin-fill');
+        $doc.classed('focused', !focused)
+          .attr('data-origin-fill', ()=>{
+            return focused ? null : $doc.style('fill');
+          })
+          .style('fill', ()=>{
+            return focused ? originalFill : '#000';
+          });
+        if(!focused){
+          self.focusDocument(d);
+        }
+      });
+
+    this.$svg.on('click', ()=>{
+      const $target = d3.select(d3.event.target);
+      if(!$target.classed('document')){
+        console.log('click on G');
+        this.unfocusDocument();
+      }
+    })
 
     this.$documents.exit().remove();
 
@@ -346,7 +369,7 @@ class Chart {
       cx: this.config.width / 2,
       cy: this.config.height / 2,
       r: (d)=>this.radiusScale(d.data.citations),
-      fill: (d)=>this.colorScale(d.data.editor),
+      fill: (d)=>d.focused ? '#000' : this.colorScale(d.data.editor),
       stroke: '0'
     });
   }
