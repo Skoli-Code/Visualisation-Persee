@@ -1,8 +1,8 @@
 'use strict';
 
 import React from 'react';
-import AuthorSource from '../../sources/Author';
-import { AuthorPropTypes } from '../Author';
+import AuthorSource from '../../../sources/Author';
+import { AuthorPropTypes } from '../';
 
 require('./index.scss');
 
@@ -35,7 +35,6 @@ class AuthorDetailsComponent extends React.Component {
         { details && <div>
             <h1>{ details.name.value }</h1>
             <p>{ abstract }&nbsp;<a onClick={ this.toggleDescription.bind(this) }>{ linkText }</a></p>
-
           </div>
         }
       </div>

@@ -1,20 +1,38 @@
-'use strict';
-/**
- * TODO:
- * - Replacer échelles des années plus proche des bulles (même Y que les bulles
- *   + 100)
- * - Ajouter les boutons de groupement (années et éditions)
- */
-
-import React from 'react';
-import ReactDOM from 'react-dom';
-
-import AuthorSource from '../../sources/Author';
-import { Button } from '../Button';
-import { AuthorPropTypes } from '../Author';
 import * as d3 from 'd3';
 
-require('./index.scss');
+let CHART_CONFIG = {
+  animations:{
+    default: 400,
+    circle: 600,
+    center: 100
+  },
+  groupByYear: true,
+  padding: {
+    top: 15,
+    left: 12,
+    right: 272,
+    bottom: 20
+  },
+  pack: {
+    margin: 20,
+    padding: 2,
+    diameter: null
+  },
+  axis: {
+    lineOpacity: 0.2
+  },
+  legend: {
+    fontSize: '0.8em'
+  },
+  ratioHeight: 0.33,
+  ratioCirclePosition: 0.5,
+  circleRange: [2, 12],
+  useMapping: false,
+  width:  null,
+  height: null,
+  minHeight: 180,
+  forceStrength: 0.03
+};
 
 const objectSetObj = (sel, obj, fct) => {
   for (const k in obj) {
@@ -32,8 +50,9 @@ const objectAttr = (sel, attrs) => {
   objectSetObj(sel, attrs, 'attr');
 }
 
-class __Chart {
-  constructor(node, publications){
+class Chart {
+  constructor(component, node, publications){
+    this.setComponent(component);
     this.initData(publications);
     this.setNode(node);
     this.initConfig();
@@ -41,10 +60,21 @@ class __Chart {
     this.initScales();
     this.createChart();
     this.addLegend();
-    this.addAxis();
     this.updateChartSize();
     this.initSimulation();
     this.draw();
+  }
+
+  setComponent(component){
+    this.component = component;
+  }
+
+  focusDocument(doc){
+    this.component.focusDocument(doc.data.url);
+  }
+
+  unfocusDocument(){
+    this.component.unfocusDocument();
   }
 
   initData(publications){
@@ -52,6 +82,7 @@ class __Chart {
     this.data = {
       documents: publications.map((p)=>{
         return {
+          url: v(p.docURL),
           document: v(p.docTitle),
           editor: v(p.publisher),
           year: +v(p.year),
@@ -79,38 +110,25 @@ class __Chart {
   }
 
   initConfig(){
-    this.config = {
-      animationDuration: 440,
-      groupByYear: true,
-      padding: {
-        top: 0,
-        left: 3,
-        right: 250,
-        bottom: 0
-      },
-      pack: {
-        margin: 20,
-        padding: 2
-      },
-      ratioHeight: 0.33,
-      ratioCirclePosition: 0.2,
-      circleRange: [2, 12],
-      useMapping: false,
-      width:  null,
-      height: null,
-      forceStrength: 0.03
-    }
+    this.config = CHART_CONFIG;
   }
 
   updateConfigSize(){
-    const { ratioHeight } = this.config;
+    const { ratioHeight, minHeight } = this.config;
     const { left, right, top, bottom } = this.config.padding;
     const nodeWidth = this.$node.node().getBoundingClientRect().width;
-    this.config.width = nodeWidth - (left + right);
-    this.config.height = (this.config.width * ratioHeight) - (top+bottom);
+    const width = nodeWidth - (left + right);
+    let height =  (width * ratioHeight) - (top+bottom);
+    if(height < minHeight){
+      height = minHeight;
+    }
+    this.config.width = width;
+    this.config.height = height;
+    this.config.pack.diameter = height;
   }
+
   initScales(){
-    let { width } = this.config;
+    let { width, circleRange } = this.config;
     this.colorScale =  d3.scaleOrdinal(d3.schemeCategory10)
       .domain(this.data.editors);
 
@@ -118,8 +136,29 @@ class __Chart {
       .domain(d3.extent(this.data.documents.map(d=>d.citations)));
 
     this.xScale = d3.scaleLinear()
-      .range([0, width-this.config.circleRange[0]*3]).domain(d3.extent(this.data.years));
+      .range([0, width-(circleRange[1]*2)])
+      .domain(d3.extent(this.data.years));
   }
+
+  addAxis(){
+    const { padding, height } = this.config;
+    const tickLength = height - padding.top - padding.bottom;
+    const axis = d3.axisBottom(this.xScale)
+      .tickFormat((d)=>d)
+      .tickSizeInner(tickLength);
+
+    this.$axis = this.$svg.append('g').attr('class', 'axis')
+      .attr('transform', `translate(${padding.left}, ${padding.top})`)
+      .call(axis);
+
+    this.$axis.select('.domain').remove();
+    this.$axis.selectAll('.tick')
+      .style('opacity', (d)=>{
+        return d % 5 == 0 ? 1 : 0;
+      })
+      .select('line').style('opacity', this.config.axis.lineOpacity);
+  }
+
   hideAxis(){
     const x = (sel)=>{
       return +sel.attr('transform').split('(')[1].split(',')[0];
@@ -131,12 +170,13 @@ class __Chart {
       const originalX = $tick.attr('data-original-x');
       return originalX ? originalX : x($tick);
     });
-    $ticks.transition(this.config.animationDuration)
+    $ticks.transition(this.config.animations.default)
       .attr('transform', 'translate(-100, 0)');
   }
+
   showAxis(){
     const $ticks = this.$axis.selectAll('.tick');
-    $ticks.transition(this.config.animationDuration)
+    $ticks.transition(this.config.animations.default)
       .attr('transform', function(){
         const previousX = d3.select(this).attr('data-original-x');
         if(previousX > 0){
@@ -147,36 +187,83 @@ class __Chart {
       });
   }
 
-  addAxis(){
-    const axis = d3.axisBottom(this.xScale).tickFormat((d)=>d);
-    this.$axis = this.$svg.append('g').attr('class', 'axis')
-      .attr('transform', `translate(0, ${this.circlesY() + 50})`)
-      .call(axis);
-    this.$axis.select('.domain').remove();
-    this.$axis.selectAll('.tick')
-      .style('opacity', (d)=>{
-        return d % 5 == 0 ? 1 : 0;
-      });
+  addLegend(){
+    const editorName = (e)=>e.split(':')[1].trim();
+
+    this.$legend = this.$node.append('div')
+      .attr('class', 'chart-legend');
+
+    objectStyle(this.$legend, {
+      'position': 'absolute',
+      'right': '0px',
+      'top': this.config.padding.top+'px',
+      display: 'flex',
+      'align-items': 'flex-end',
+      'flex-direction': 'column'
+    });
+    const $legendElements = this.$legend.selectAll('.chart-legend__element')
+      .data(this.data.editors)
+      .enter().append('div').attr('class', 'chart-legend__element');
+
+    objectStyle($legendElements, {
+      'margin-bottom': '5px',
+      display: 'flex',
+      'max-width': '250px',
+      'align-items': 'center'
+    });
+
+    const $titles = $legendElements.append('span').attr('class', 'title');
+    objectStyle($titles, {
+      'text-align': 'right',
+      'font-size': this.config.legend.fontSize
+    });
+
+    const $circles = $legendElements.append('span').attr('class', 'circle');
+    objectStyle($circles, {
+      // display: 'inline-block',
+      height: '0.66em',
+      width: '0.66em',
+      'flex-grow': 0,
+      'flex-shrink': 0,
+      'margin-left': '7px',
+      'border-radius': '50%',
+      'background-color': (d)=>this.colorScale(d)
+    });
+    $titles.text((d)=>editorName(d));
+  }
+
+  updateGraphCenter(){
+    const { left, top } = this.config.padding;
+    const { width } = this.config;
+    const { diameter } = this.config.pack;
+    const yearGrouping = this.useYearGrouping();
+    const _top  = yearGrouping ? top : 0;
+    const _left = yearGrouping ? left : ((width/2)-(diameter/2));
+    const transform = `translate(${_left}, ${ _top })`;
+    this.$g.transition(this.config.animations.center).attr('transform', transform);
   }
 
   groupByYear(){
     this.config.groupByYear = true;
     this.showAxis();
     this.updateSimulation();
+    this.updateGraphCenter();
   }
 
   groupByEditor(){
     this.config.groupByYear = false;
     this.hideAxis();
     this.updateSimulation();
+    this.updateGraphCenter();
   }
+
   useYearGrouping(){
     return this.config.groupByYear;
   }
 
   circlesY(){
     const { height, ratioCirclePosition } = this.config;
-    return height*ratioCirclePosition;
+    return height*ratioCirclePosition - 20;
   }
 
   forceX(){
@@ -198,54 +285,10 @@ class __Chart {
       .alpha(1).restart();
   }
 
-  addLegend(){
-    const editorName = (e)=>e.split(':')[1].trim();
-
-    this.$legend = this.$node.append('div')
-      .attr('class', 'chart-legend');
-
-    objectStyle(this.$legend, {
-      'position': 'absolute',
-      'right': '0px',
-      'top': '0px',
-      display: 'flex',
-      'align-items': 'flex-end',
-      'flex-direction': 'column'
-    });
-    const $legendElements = this.$legend.selectAll('.chart-legend__element')
-      .data(this.data.editors)
-      .enter().append('div').attr('class', 'chart-legend__element');
-
-    objectStyle($legendElements, {
-      'margin-bottom': '5px',
-      display: 'flex',
-      'max-width': '250px',
-      'align-items': 'center'
-    });
-
-    const $titles = $legendElements.append('span').attr('class', 'title');
-    objectStyle($titles, { 'text-align': 'right' });
-
-    const $circles = $legendElements.append('span').attr('class', 'circle');
-    objectStyle($circles, {
-      // display: 'inline-block',
-      height: '0.66em',
-      width: '0.66em',
-      'flex-grow': 0,
-      'flex-shrink': 0,
-      'margin-left': '7px',
-      'border-radius': '50%',
-      'background-color': (d)=>this.colorScale(d)
-    });
-    $titles.text((d)=>editorName(d));
-  }
-
   initSimulation(){
-    const diameter = (this.data.editors.length * 50 )- this.config.pack.margin;
-
+    const { diameter } = this.config.pack;
     const pack = d3.pack()
-      .size([diameter, diameter])
-      .padding(this.config.pack.padding);
+      .size([diameter, diameter]);
 
     pack(this.data.hierarchy);
 
@@ -257,19 +300,18 @@ class __Chart {
       // .force('charge', d3.forceManyBody())
       .force('x', this.forceX())
       .force('y', this.forceY())
-      .force('radius', d3.forceCollide((d)=>this.radiusScale(d.data.citations)))
+      .force('radius', d3.forceCollide((d)=>this.radiusScale(d.data.citations)+1))
       .on('tick', ()=>{
         this.$documentsEnter
         .attr('cx', (d)=>d.x)
         .attr('cy', (d)=>d.y);
       }).alpha(1).restart();
-
-
   }
 
   createChart(){
     const { left, top } = this.config.padding;
     this.$svg = this.$node.append('svg');
+    this.addAxis();
     this.$g = this.$svg.append('g')
       .attr('transform', `translate(${left}, ${top})`);
   }
@@ -289,16 +331,18 @@ class __Chart {
   }
 
   draw(){
-    console.log('this.data.packedDocuments', this.data.packedDocuments);
     this.$documents = this.$g.selectAll('.document')
       .data(this.data.packedDocuments);
 
     this.$documentsEnter = this.$documents.enter()
-      .append('circle').attr('class', (d)=>`document year-${d.data.year}`);
+      .append('circle')
+      .attr('class', (d)=>`document year-${d.data.year}`)
+      .on('click', (d)=>this.focusDocument(d));
 
     this.$documents.exit().remove();
 
     objectAttr(this.$documentsEnter, {
+      cursor: 'pointer',
       cx: this.config.width / 2,
       cy: this.config.height / 2,
       r: (d)=>this.radiusScale(d.data.citations),
@@ -308,44 +352,4 @@ class __Chart {
   }
 }
 
-class AuthorVisualizationComponent extends React.Component {
-  constructor(props){
-    super(props);
-    this.state = {
-      chart: null
-    }
-  }
-  async componentDidMount(){
-    let publications = await AuthorSource.allPublications(this.props.authorName);
-    const chart = new __Chart(this.node(), publications);
-    this.setState( { chart: chart })
-  }
-
-  node(){
-    const node = ReactDOM.findDOMNode(this);
-    return node.children.chart;
-  }
-
-  render() {
-    const { chart } = this.state;
-    return (
-      <div className="author-viz">
-        { chart &&
-          <div className="author-viz__controls">
-            <Button onClick={ chart.groupByYear.bind(chart) }>Par années</Button>
-            <Button onClick={ chart.groupByEditor.bind(chart) }>Par éditeur</Button>
-          </div>
-        }
-        <div id="chart"></div>
-      </div>
-    );
-  }
-}
-
-AuthorVisualizationComponent.displayName = 'AuthorVisualizationComponent';
-
-// Uncomment properties you need
-AuthorVisualizationComponent.propTypes = AuthorPropTypes;
-// AuthorVisualizationComponent.defaultProps = {};
-
-export default AuthorVisualizationComponent;
+export default Chart;
