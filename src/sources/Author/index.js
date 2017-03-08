@@ -28,7 +28,7 @@ class AuthorSource {
   */
   static async allPublications(authorName){
     let query = `
-    SELECT DISTINCT ?docTitle (YEAR(xsd:dateTime(?pubDate)) AS ?year) (COUNT(DISTINCT ?cits) AS ?nbCitations) ?publisher
+    SELECT DISTINCT ?docURL ?docTitle ?docAbstract ?englishDocAbstract (YEAR(xsd:dateTime(?pubDate)) AS ?year) (COUNT(DISTINCT ?docCitations) AS ?nbCitations) ?publisher
     WHERE {
       ?p a foaf:Person .
       ?p foaf:name ?name .
@@ -36,13 +36,24 @@ class AuthorSource {
       ?doc dcterms:title ?docTitle .
       ?doc rdam:isElectronicReproduction ?printDoc .
       ?printDoc rdam:dateOfPublication ?pubDate .
-      ?doc cito:isCitedBy ?cits .
-      ?printDoc dcterms:publisher ?publisher
+      ?doc cito:isCitedBy ?docCitations .
+      ?printDoc dcterms:publisher ?publisher .
+      ?doc dcterms:identifier ?docURL .
       FILTER(?name = "${authorName}")
+      OPTIONAL {
+        {
+          ?doc dcterms:abstract ?docAbstract .
+          FILTER(LANG(?docAbstract)= "fr")
+        }
+        UNION
+        {
+          ?doc dcterms:abstract ?englishDocAbstract .
+          FILTER(LANGMATCHES(LANG(?englishDocAbstract),"en"))
+        }
+      }
     }
-    GROUP BY ?docTitle ?name ?publisher ?pubDate
-    ORDER BY ?year
-    `;
+    GROUP BY ?docURL ?docAbstract ?englishDocAbstract ?docTitle ?name ?publisher ?pubDate
+    ORDER BY ?year`;
     let exec = await sparqlQuery(query, 'http://data.persee.fr/sparql');
     let details = exec.results.bindings;
     return details;
