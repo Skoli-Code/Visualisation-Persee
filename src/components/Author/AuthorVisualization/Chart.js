@@ -357,7 +357,6 @@ class Chart {
     this.$svg.on('click', ()=>{
       const $target = d3.select(d3.event.target);
       if(!$target.classed('document')){
-        console.log('click on G');
         this.unfocusDocument();
       }
     })

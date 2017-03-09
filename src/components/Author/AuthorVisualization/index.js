@@ -51,7 +51,6 @@ class AuthorVisualizationComponent extends React.Component {
   focusDocument(docURL){
     const { documents } = this.state;
     const focusedDocument = documents.find((d)=>d.docURL.value == docURL );
-    console.log('focusedDocument: ', focusedDocument);
     this.setState({ focusedDocument: focusedDocument });
   }
   unfocusDocument(){

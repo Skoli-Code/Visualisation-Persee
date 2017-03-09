@@ -6,6 +6,7 @@
   "scripts": {
     "clean": "rimraf dist/*",
     "copy": "copyfiles -f ./src/index.html ./src/favicon.ico ./dist",
+    "deploy": "npm run-script dist && surge -p dist/ -d skoli-persee-vis.surge.sh",
     "dist": "npm run copy & webpack --env=dist",
     "lint": "eslint ./src",
     "posttest": "npm run lint",
