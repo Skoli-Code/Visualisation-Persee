@@ -24,9 +24,11 @@ let CHART_CONFIG = {
   legend: {
     fontSize: '0.8em'
   },
-  ratioHeight: 0.33,
+  circleFocusFill: '#000',
+  circleEmptyFill: '#FFF',
+  ratioHeight: 0.5,
   ratioCirclePosition: 0.5,
-  circleRange: [2, 12],
+  circleRange: [3, 13],
   useMapping: false,
   width:  null,
   height: null,
@@ -90,20 +92,20 @@ class Chart {
         return {
           url: v(p.docURL),
           document: v(p.docTitle),
-          editor: v(p.publisher),
+          journal: v(p.journal),
           year: +v(p.year),
           citations: +v(p.nbCitations)
         }
       })
     };
-    this.data.editors = uniq(this.data.documents.map(d=>d.editor));
+    this.data.journals = uniq(this.data.documents.map(d=>d.journal));
     this.data.years = this.data.documents.map(d=>d.year);
     const root = {
       name: 'root',
-      children: this.data.editors.map((editor)=>{
+      children: this.data.journals.map((journal)=>{
         return {
-          name: editor,
-          children: this.data.documents.filter((doc)=>doc.editor == editor)
+          name: journal,
+          children: this.data.documents.filter((doc)=>doc.journal == journal)
         }
       })
     };
@@ -134,7 +136,7 @@ class Chart {
   initScales(){
     let { width, circleRange } = this.config;
     this.colorScale =  d3.scaleOrdinal(d3.schemeCategory10)
-      .domain(this.data.editors);
+      .domain(this.data.journals);
 
     this.radiusScale = d3.scaleLinear()
       .range(this.config.circleRange)
@@ -193,7 +195,7 @@ class Chart {
   }
 
   addLegend(){
-    const editorName = (e)=>e.split(':')[1].trim();
+    // const journalName = (e)=>e.split(':')[1].trim();
 
     this.$legend = this.$node.append('div')
       .attr('class', 'chart-legend');
@@ -207,7 +209,7 @@ class Chart {
       'flex-direction': 'column'
     });
     const $legendElements = this.$legend.selectAll('.chart-legend__element')
-      .data(this.data.editors)
+      .data(this.data.journals)
       .enter().append('div').attr('class', 'chart-legend__element');
 
     objectStyle($legendElements, {
@@ -234,7 +236,7 @@ class Chart {
       'border-radius': '50%',
       'background-color': (d)=>this.colorScale(d)
     });
-    $titles.text((d)=>editorName(d));
+    $titles.text((d)=>d);
   }
 
   updateGraphCenter(){
@@ -255,7 +257,7 @@ class Chart {
     this.updateGraphCenter();
   }
 
-  groupByEditor(){
+  groupByJournal(){
     this.config.groupByYear = false;
     this.hideAxis();
     this.updateSimulation();
@@ -347,7 +349,7 @@ class Chart {
             return focused ? null : $doc.style('fill');
           })
           .style('fill', ()=>{
-            return focused ? originalFill : '#000';
+            return focused ? originalFill : self.config.circleFocusFill;
           });
         if(!focused){
           self.focusDocument(d);
@@ -363,13 +365,22 @@ class Chart {
 
     this.$documents.exit().remove();
 
+    let documentFill = (d)=>{
+      // if(d.focused){ return this.config.circleFocusFill; }
+      if(d.data.citations == 0){ return this.config.circleEmptyFill; }
+      return this.colorScale(d.data.journal);
+    }
+    let documentStroke = (d)=>{
+      return d.data.citations > 0 ? 0 : this.colorScale(d.data.journal);
+    }
+
     objectAttr(this.$documentsEnter, {
       cursor: 'pointer',
       cx: this.config.width / 2,
       cy: this.config.height / 2,
       r: (d)=>this.radiusScale(d.data.citations),
-      fill: (d)=>d.focused ? '#000' : this.colorScale(d.data.editor),
-      stroke: '0'
+      fill: documentFill,
+      stroke: documentStroke
     });
   }
 }

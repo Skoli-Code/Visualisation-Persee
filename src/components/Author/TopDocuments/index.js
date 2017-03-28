@@ -13,7 +13,7 @@ import AuthorSource from '../../../sources/Author';
 import { Button } from '../../Button';
 import { AuthorPropTypes } from '../';
 
-import Chart from './Chart';
+import BubbleChart from './Chart';
 
 require('./index.scss');
 
@@ -28,10 +28,13 @@ class AuthorVisualizationComponent extends React.Component {
       focusedDocument: null
     }
   }
-  async componentDidMount(){
-    let documents = await AuthorSource.allPublications(this.props.authorName);
-    const chart = new Chart(this, this.node(), documents);
-    this.setState( { chart: chart, documents: documents });
+  componentDidMount(){
+    AuthorSource.allPublications(this.props.authorName)
+      .then((documents)=>{
+        console.log('documents', documents);
+        const chart = new BubbleChart(this, this.node(), documents);
+        this.setState( { chart: chart, documents: documents });
+      });
   }
 
   node(){
@@ -43,8 +46,8 @@ class AuthorVisualizationComponent extends React.Component {
     this.state.chart.groupByYear();
     this.setState({ groupByYear: true });
   }
-  groupByEditor(){
-    this.state.chart.groupByEditor();
+  groupByJournal(){
+    this.state.chart.groupByJournal();
     this.setState({ groupByYear: false });
   }
 
@@ -60,23 +63,8 @@ class AuthorVisualizationComponent extends React.Component {
   render() {
     const v=(binding)=>binding.value;
 
-    const getAbstract = (doc)=>{
-      let abstract = '';
-      if(!doc || (!doc.docAbstract && !doc.englishDocAbstract)){
-        return null;
-      }
-      if(doc.docAbstract){
-        abstract = v(doc.docAbstract);
-      } else if(doc.englishDocAbstract){
-        abstract = v(doc.englishDocAbstract);
-      }
-      abstract = abstract.trim();
-      abstract = abstract.replace(/\n/g, '<br/>');
-      return abstract;
-    };
-
     const { chart, groupByYear, focusedDocument } = this.state;
-    const abstract = getAbstract(focusedDocument);
+
     return (
       <div className="author-viz">
         <h3>Ses documents les plus cités (taille des bulles proportionnelle)</h3>
@@ -84,7 +72,7 @@ class AuthorVisualizationComponent extends React.Component {
         { chart &&
           <div className="author-viz__controls">
             <Button pressed={ groupByYear } onClick={ this.groupByYear.bind(this) }>Par année</Button>
-            <Button pressed={ !groupByYear } onClick={ this.groupByEditor.bind(this) }>Par éditeur</Button>
+            <Button pressed={ !groupByYear } onClick={ this.groupByJournal.bind(this) }>Par revue</Button>
           </div>
         }
         <div id="chart"></div>
@@ -104,16 +92,9 @@ class AuthorVisualizationComponent extends React.Component {
               <span>{ v(focusedDocument.nbCitations) }</span>
             </div>
             <div className="document-details__info">
-              <label>Editeur:</label>
-              <span>{ v(focusedDocument.publisher).split(':')[1].trim() }</span>
+              <label>Revue:</label>
+              <span>{ v(focusedDocument.journal) }</span>
             </div>
-              { abstract &&
-                <div className="document-details__info">
-                  <label>Résumé:</label>
-                  <p dangerouslySetInnerHTML={ {__html: abstract}}></p>
-                </div>
-              }
-
           </div>
         }
       </div>

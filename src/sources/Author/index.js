@@ -1,13 +1,34 @@
 import Sparql from 'virtuoso-sparql-client'
 // import promisify from 'es6-promisify'
 
-function sparqlQuery(query, endpoint, prefixes=[]){
+async function sparqlQuery(query, endpoint, singleResult=false){
   let client = new Sparql.Client(endpoint);
   client.setOptions('application/json');
-  return client.query(query, prefixes);
+  let exec = await client.query(query);
+  let results = exec.results.bindings;
+  return singleResult ? results[0] : results;
 }
+const ENDPOINTS = {
+  DBPEDIA: 'http://fr.dbpedia.org/sparql',
+  PERSEE: 'http://data.persee.fr/sparql',
+  BNF: 'http://data.bnf.fr/sparql'
+};
 
 class AuthorSource {
+  static async set(storageKey, query, endpoint, singleResult=false){
+    let result = await sparqlQuery(query, endpoint);
+    localStorage.setItem(storageKey, JSON.stringify(result));
+    return result;
+  }
+
+  static get(storageKey, query, endpoint, useSingleResult=false){
+    const storageItem = localStorage.getItem(storageKey);
+    if(!storageItem){
+      return AuthorSource.set(storageKey, query, endpoint, useSingleResult);
+    }
+    return JSON.parse(storageItem);
+  }
+
   static async getDetails(authorName){
     const query = `SELECT DISTINCT ?name ?abstract WHERE {
       ?person a foaf:Person .
@@ -16,9 +37,7 @@ class AuthorSource {
       FILTER(?name = "${authorName}"@fr)
       FILTER(lang(?abstract) = 'fr')
     }`;
-    let exec = await sparqlQuery(query, 'http://fr.dbpedia.org/sparql');
-    let details = exec.results.bindings[0];
-    return details;
+    return sparqlQuery(query, ENDPOINTS.DBPEDIA, true);
   }
 
   /**
@@ -27,33 +46,42 @@ class AuthorSource {
   * for every document.
   */
   static async allPublications(authorName){
-    let query = `
-    SELECT DISTINCT ?docURL ?docTitle ?docAbstract ?englishDocAbstract (YEAR(xsd:dateTime(?pubDate)) AS ?year) (COUNT(DISTINCT ?docCitations) AS ?nbCitations) ?publisher
+    const query = `
+    SELECT ?docURL ?docTitle ?docAbstract ?englishDocAbstract (YEAR(?date) as ?year) (COUNT(DISTINCT ?docCitations) AS ?nbCitations) ?journal
     WHERE {
       ?p a foaf:Person .
-      ?p foaf:name ?name .
+      ?p foaf:name "${authorName}" .
+      ?j a bibo:Journal .
+      ?doc a bibo:Document .
+      ?i dcterms:isPartOf ?j .
+      ?doc dcterms:isPartOf ?i .
       ?doc marcrel:aut ?p .
       ?doc dcterms:title ?docTitle .
-      ?doc rdam:isElectronicReproduction ?printDoc .
-      ?printDoc rdam:dateOfPublication ?pubDate .
-      ?doc cito:isCitedBy ?docCitations .
-      ?printDoc dcterms:publisher ?publisher .
+      ?j dcterms:title ?journal .
+      ?doc persee:dateOfPrintPublication ?date .
       ?doc dcterms:identifier ?docURL .
-      FILTER(?name = "${authorName}")
       OPTIONAL {
-          ?doc dcterms:abstract ?docAbstract .
-          FILTER(LANG(?docAbstract)= "fr")
-      } .
-      OPTIONAL {
-          ?doc dcterms:abstract ?englishDocAbstract .
-          FILTER(LANGMATCHES(LANG(?englishDocAbstract),"en"))
-      } .
+        ?doc cito:isCitedBy ?docCitations .
+      }
     }
-    GROUP BY ?docURL ?docAbstract ?englishDocAbstract ?docTitle ?name ?publisher ?pubDate
+    GROUP BY ?docURL ?date ?journal ?docTitle ?docAbstract ?englishDocAbstract
     ORDER BY ?year`;
-    let exec = await sparqlQuery(query, 'http://data.persee.fr/sparql');
-    let details = exec.results.bindings;
-    return details;
+    return sparqlQuery(query, ENDPOINTS.PERSEE);
+  }
+
+  static async compareAuthors(authorNames){
+    const query=`
+    SELECT (YEAR(?date) as ?year) ?authorName (COUNT(?doc) as ?nbDocs) (COUNT(?citations) as ?nbCitations)
+    WHERE {
+      ?doc a bibo:Document .
+      OPTIONAL {
+        ?doc cito:isCitedBy ?citations
+      }
+      FILTER(?authorName IN (${authorNames.join(', ')}))
+    }
+    GROUP BY ?authorName ?date
+    ORDER BY ?year`;
+    return sparqlQuery(query, ENDPOINTS.PERSEE);
   }
 }
 export default AuthorSource;

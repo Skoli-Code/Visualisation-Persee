@@ -14,7 +14,9 @@ class AuthorDetailsComponent extends React.Component {
 
   componentDidMount(){
     AuthorSource.getDetails(this.props.authorName)
-      .then((details)=>this.setState({ details: details }));
+      .then((details)=>{
+        this.setState({ details: details });
+      });
   }
 
   toggleDescription(){
