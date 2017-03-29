@@ -47,7 +47,6 @@ const objectStyle = (sel, styles) => {
   objectSetObj(sel, styles, 'style');
 }
 
-
 const objectAttr = (sel, attrs) => {
   objectSetObj(sel, attrs, 'attr');
 }

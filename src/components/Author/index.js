@@ -2,7 +2,8 @@
 
 import React, { PropTypes } from 'react';
 import Details from './Details';
-import AuthorVisualization from './AuthorVisualization';
+import TopDocuments from './TopDocuments';
+import Comparision from './Comparision';
 
 require('./index.scss');
 
@@ -18,29 +19,36 @@ class AuthorList extends React.Component {
     }
   }
 
+
   focusAuthor(authorName){
     this.setState({ focusedAuthorName: authorName});
   }
-
-  closeDetails(){
-    this.setState({focusedAuthorName: null});
+  compareAuthors(){
+    this.setState({ compareAuthors: true });
+  }
+  backToList(){
+    this.setState({focusedAuthorName: null, compareAuthors: null});
   }
 
+
   render(){
-    const { focusedAuthorName } = this.state;
+    const { focusedAuthorName, compareAuthors } = this.state;
     const { authorNames } = this.props;
     return (
       <div className="author-list">
         { (focusedAuthorName||compareAuthors) &&
           <div className="author-list__focused-author">
-            <a className="close" onClick={ this.closeDetails.bind(this)}>&lsaquo; Retour à la liste des auteurs</a>
-            <AuthorComponent authorName={ focusedAuthorName }/>
+            <a className="close" onClick={ this.backToList.bind(this)}>&lsaquo; Retour à la liste des auteurs</a>
           </div>
+        }
+        {
+          focusedAuthorName &&
+          <AuthorComponent authorName={ focusedAuthorName }/>
         }
         {
           compareAuthors &&
           <div>
-            <AuthorComparision authorNames={ authorNames }/>
+            <Comparision authorNames={ authorNames }/>
           </div>
         }
         {
@@ -61,7 +69,7 @@ class AuthorList extends React.Component {
 
               }
               </ul>
-              <p>Ou bien cliquez <a onClick={ this.compareAuthors.bind(this) }>ici</a> pour comparer les auteurs entre eux.</p>
+              <p><br/>Ou bien cliquez <a onClick={ this.compareAuthors.bind(this) }>ici</a> pour comparer les auteurs entre eux.</p>
             </div>
 
         }
@@ -76,11 +84,7 @@ class AuthorComponent extends React.Component {
       <div className="author-component">
         <Details authorName={this.props.authorName}/>
         <div>
-          {
-
-          }
-          <AuthorVisualization authorNames={ authorNames }/>
-          <AuthorVisualization authorName={this.props.authorName}/>
+          <TopDocuments authorName={this.props.authorName}/>
         </div>
       </div>
     );

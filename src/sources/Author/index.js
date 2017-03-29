@@ -71,13 +71,16 @@ class AuthorSource {
 
   static async compareAuthors(authorNames){
     const query=`
-    SELECT (YEAR(?date) as ?year) ?authorName (COUNT(?doc) as ?nbDocs) (COUNT(?citations) as ?nbCitations)
+    SELECT (YEAR(?date) as ?year) ?authorName (COUNT(DISTINCT ?doc) as ?nbDocs) (COUNT(DISTINCT ?citations) as ?nbCitations)
     WHERE {
       ?doc a bibo:Document .
+      ?doc persee:dateOfPrintPublication ?date .
+      ?doc marcrel:aut ?aut .
+      ?aut foaf:name ?authorName .
       OPTIONAL {
-        ?doc cito:isCitedBy ?citations
+        ?doc cito:isCitedBy ?citations .
       }
-      FILTER(?authorName IN (${authorNames.join(', ')}))
+      FILTER(?authorName IN ("${authorNames.join('", "')}"))
     }
     GROUP BY ?authorName ?date
     ORDER BY ?year`;
